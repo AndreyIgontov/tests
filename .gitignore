@@ -1,0 +1,14 @@
+.DS_Store
+# Environments
+__pycache__/
+.env/
+.env_old/
+.evn2/
+.venv
+env/
+venv/
+ENV/
+venv3.8
+
+# PyCharm
+.idea/
