@@ -1,15 +1,9 @@
-import inspect
-import math
 import requests
-# import settings
 from pyVim.task import WaitForTask
 from pyVim.connect import SmartConnect, Disconnect
 
-from pyVmomi import vim, vmodl
+from pyVmomi import vim
 
-# from services.logger import Logger
-# from services.zerto import Zerto
-# from includes.common import Common
 
 class Vsphere:
 
@@ -40,8 +34,6 @@ class Vsphere:
 			)
 
 		except Exception as e:
-			# Logger.CreateExceptionLog(inspect.stack()[0][3], str(e), 'ERROR - Could not connect with vSphere')
-
 			return False
 
 	def Disconnect(si):
@@ -50,7 +42,6 @@ class Vsphere:
 			return Disconnect(si)
 
 		except Exception as e:
-			Logger.CreateExceptionLog(inspect.stack()[0][3], str(e), 'ERROR - Could not disconnect from vSphere')
 
 			return False
 
@@ -64,7 +55,6 @@ class Vsphere:
 			)
 
 		except Exception as e:
-			# Logger.CreateExceptionLog(inspect.stack()[0][3], str(e), 'ERROR - Could not access vSpshere object')
 			return False
 
 		if not name:
@@ -105,7 +95,7 @@ class Vsphere:
 			verify=False
 		)
 
-		return True if response.status_code in [200, 201] else False
+		return response.status_code in [200, 201]
 
 	def GetVirtualCDSpec(virtual_cdrom_device, iso_path=None):
 
@@ -324,7 +314,6 @@ class Vsphere:
 			return True
 
 		except Exception as e:
-			Logger.CreateExceptionLog(inspect.stack()[0][3], f'Resizing error {e}','ERROR')
 			return False
 
 	def RenameVM(si, vm_name, new_vm_name):
@@ -378,7 +367,6 @@ class Vsphere:
 	def ListVMHardDisks(si, vm_name):
 		vm = Vsphere.GetObject(si, vim.VirtualMachine, vm_name)
 		if not vm:
-			Logger.CreateExceptionLog(inspect.stack()[0][3], f'VM {vm_name} not found', 'ERROR')
 			return None
 
 		hard_disks = []
@@ -398,7 +386,6 @@ class Vsphere:
 
 		vm = Vsphere.GetObject(si, vim.VirtualMachine, vm_name)
 		if not vm:
-			Logger.CreateExceptionLog(inspect.stack()[0][3], f'VM {vm_name} not found', 'ERROR')
 			return False
 
 		disk_spec = Vsphere._CreateDiskSpec(vm, disk_size_gb)
@@ -409,7 +396,6 @@ class Vsphere:
 	def RemoveDiskFromVM(si, vm_name, disk_label):
 		vm = Vsphere.GetObject(si, vim.VirtualMachine, vm_name)
 		if not vm:
-			Logger.CreateExceptionLog(inspect.stack()[0][3], f'VM {vm_name} not found', 'ERROR')
 			return False
 
 		disk_to_remove = None
@@ -419,7 +405,6 @@ class Vsphere:
 				break
 
 		if not disk_to_remove:
-			Logger.CreateExceptionLog(inspect.stack()[0][3], f'Disk {disk_label} not found on VM {vm_name}', 'ERROR')
 			return False
 
 		disk_spec = vim.vm.device.VirtualDeviceSpec()
