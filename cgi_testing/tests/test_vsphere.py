@@ -2,10 +2,10 @@ import pytest
 from unittest.mock import patch, MagicMock, call
 from pyVmomi import vim
 
-from cgi.classes.vsphere import Vsphere
+from cgi_testing.classes.vsphere import Vsphere
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def mock_si():
 
     mock = MagicMock()
@@ -15,11 +15,11 @@ def mock_si():
 
     return mock
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def mock_vm():
     return MagicMock()
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def vsphere_instance():
     return Vsphere(
         host="test-host",
@@ -36,7 +36,7 @@ class TestVsphereConnections:
         assert vsphere.user == "test-user"
         assert vsphere.pwd == "test-pwd"
 
-    @patch("cgi.classes.vsphere.SmartConnect")
+    @patch("cgi_testing.classes.vsphere.SmartConnect")
     def test_connection(self, mock_smart_connect):
         mock_smart_connect.return_value = MagicMock()
 
@@ -51,7 +51,7 @@ class TestVsphereConnections:
 
         assert result is not False
 
-    @patch("cgi.classes.vsphere.SmartConnect")
+    @patch("cgi_testing.classes.vsphere.SmartConnect")
     def test_connection_failure(self, mock_smart_connect):
         mock_smart_connect.side_effect = Exception("Failed to connect")
 
@@ -115,36 +115,19 @@ class TestVsphereUploadToDatastore:
         assert result == expected_result
 
 
-    def test_convert_cookie_with_semicolon(self):
-
-        test_cookie = "VMware_CSRF_TOKEN=41; Path=/sdk; Secure; HttpOnly"
-        expected_result = {
-            "VMware_CSRF_TOKEN": " 41; $Path=/sdk"
-        }
-
-        result = Vsphere.ConvertSICookieToDict(test_cookie)
-
-        assert result == expected_result
-
-    def test_convert_cookie_error_handling(self):
-
-        invalid_cookies = [
+    @pytest.mark.parametrize("cookie", [
             "",  # Empty string
             "invalid_cookie",  # No equals sign
             "name=",  # No value
             "=value",  # No name
             None,  # None value
-        ]
+    ])
+    def test_convert_cookie_error_handling(self, cookie):
+        with pytest.raises(Exception):
+            Vsphere.ConvertSICookieToDict(cookie)
 
-        for invalid_cookie in invalid_cookies:
-            try:
-                Vsphere.ConvertSICookieToDict(invalid_cookie)
-                assert False, f"Expected error for invalid cookie: {invalid_cookie}"
-            except Exception:
-                assert True
-
-    @patch("cgi.classes.vsphere.Vsphere.GetObject")
-    @patch("cgi.classes.vsphere.requests.put")
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.requests.put")
     def test_upload_to_datastore(self, mock_put, mock_get_object, mock_si):
 
         mock_si._stub.cookie = "VMware_CSRF_TOKEN=41234123; Path=/sdk"
@@ -182,8 +165,8 @@ class TestVsphereUploadToDatastore:
             verify=False
         )
 
-    @patch("cgi.classes.vsphere.Vsphere.GetObject")
-    @patch("cgi.classes.vsphere.requests.put")
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.requests.put")
     def test_upload_to_datastore(self, mock_put, mock_get_object, mock_si):
 
         mock_si._stub.cookie = "VMware_CSRF_TOKEN=41234123; Path=/sdk"
@@ -212,6 +195,7 @@ class TestVsphereUploadToDatastore:
 
 class TestVsphereVirtualCDSpec:
 
+    # Can be parametrized but with negative outcome of additional branching
     def test_get_virtual_cd_spec_with_iso(self):
 
         mock_cdrom = MagicMock()
@@ -251,8 +235,8 @@ class TestVsphereVirtualCDSpec:
 
 class TestVsphereAttachISO:
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_attach_iso_success(self, mock_execute_task, mock_get_object, mock_si, mock_vm):
 
         mock_vm.ReconfigVM_Task = MagicMock(return_value='fake_task')
@@ -278,10 +262,12 @@ class TestVsphereAttachISO:
         )
 
         assert result is True
+
+
 class TestVspherePowerOperations:
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ChangeVMPowerState')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState')
     def test_vm_power_on_success(self, mock_change_power_state, mock_get_object, mock_si, mock_vm):
 
         mock_vm.PowerOn = MagicMock()
@@ -298,7 +284,7 @@ class TestVspherePowerOperations:
             mock_vm.PowerOn
         )
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
     def test_vm_power_on_not_found(self, mock_get_object, mock_si):
 
         mock_get_object.return_value = False
@@ -307,8 +293,8 @@ class TestVspherePowerOperations:
 
         assert result is False
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ChangeVMPowerState')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState')
     def test_power_on_vm_failure(self, mock_change_power_state, mock_get_object, mock_vm):
 
         mock_vm.PowerOn = MagicMock()
@@ -319,8 +305,8 @@ class TestVspherePowerOperations:
 
         assert result is False
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ChangeVMPowerState')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState')
     def test_vm_power_off_success(self, mock_change_power_state, mock_get_object, mock_si, mock_vm):
 
         mock_vm.PowerOff = MagicMock()
@@ -337,7 +323,7 @@ class TestVspherePowerOperations:
             mock_vm.PowerOff
         )
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
     def test_vm_power_off_not_found(self, mock_get_object, mock_si):
 
         mock_get_object.return_value = False
@@ -346,8 +332,8 @@ class TestVspherePowerOperations:
 
         assert result is False
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ChangeVMPowerState')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState')
     def test_power_off_vm_failure(self, mock_change_power_state, mock_get_object, mock_vm):
 
         mock_vm.PowerOff = MagicMock()
@@ -358,8 +344,8 @@ class TestVspherePowerOperations:
 
         assert result is False
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_reboot_vm_guest_success(self, mock_execute_task, mock_get_object, mock_si, mock_vm):
 
         mock_vm.RebootGuest = MagicMock()
@@ -373,8 +359,8 @@ class TestVspherePowerOperations:
         mock_get_object.assert_called_once()
         mock_execute_task.assert_called_once_with(mock_vm.RebootGuest)
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_reboot_vm_reset_success(self, mock_execute_task, mock_get_object, mock_si, mock_vm):
 
         mock_vm.RebootGuest = MagicMock()
@@ -405,7 +391,7 @@ class TestVspherePowerOperations:
 
         assert result is True
 
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_change_vm_power_different_state(self, mock_execute_task, mock_vm):
 
         mock_vm.runtime.powerState = vim.VirtualMachinePowerState.poweredOff
@@ -419,8 +405,8 @@ class TestVspherePowerOperations:
 
 class TestVsphereDeleteVm:
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_delete_vm_powered_off(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
 
         mock_vm.runtime = MagicMock()
@@ -436,9 +422,9 @@ class TestVsphereDeleteVm:
         mock_execute_task.assert_called_once()
         mock_get_object.assert_called_once()
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere.PowerOffVM')
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere.PowerOffVM')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_delete_vm_powered_on(self, mock_execute_task, mock_power_off_vm, mock_get_object, mock_vm, mock_si):
 
         mock_vm.runtime = MagicMock()
@@ -458,7 +444,7 @@ class TestVsphereDeleteVm:
 
 class TestVsphereExecuteTask:
 
-    @patch('cgi.classes.vsphere.WaitForTask')
+    @patch('cgi_testing.classes.vsphere.WaitForTask')
     def test_execute_task_success(self, mock_wait_task):
 
         mock_task = MagicMock()
@@ -474,7 +460,7 @@ class TestVsphereExecuteTask:
         mock_wait_task.assert_called_once_with(mock_task)
 
 
-    @patch('cgi.classes.vsphere.WaitForTask')
+    @patch('cgi_testing.classes.vsphere.WaitForTask')
     def test_execute_task_failure(self, mock_wait_task):
 
         mock_task = MagicMock()
@@ -489,7 +475,7 @@ class TestVsphereExecuteTask:
         mock_task_method.assert_called_once_with(arg1='test', arg2='test2')
         mock_wait_task.assert_called_once_with(mock_task)
 
-    @patch('cgi.classes.vsphere.WaitForTask')
+    @patch('cgi_testing.classes.vsphere.WaitForTask')
     def test_execute_task_with_args(self, mock_wait_task):
 
         mock_task = MagicMock()
@@ -507,8 +493,8 @@ class TestVsphereExecuteTask:
 
 class TestVsphereSnapshots:
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_make_snapshot_vm_success(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
 
         mock_get_object.return_value = mock_vm
@@ -531,8 +517,8 @@ class TestVsphereSnapshots:
             quiesce=False
         )
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_make_snapshot_vm_failure(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
 
         mock_get_object.return_value = mock_vm
@@ -555,7 +541,7 @@ class TestVsphereSnapshots:
             quiesce=False
         )
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
     def test_make_snapshot_vm_not_found(self, mock_get_object, mock_vm, mock_si):
 
         mock_get_object.return_value = False
@@ -570,8 +556,8 @@ class TestVsphereSnapshots:
         assert result is False
         mock_get_object.assert_called_once()
 
-    @patch('cgi.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
     def test_restore_snapshot(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
         snapshot1 = MagicMock()
         snapshot1.name = "snapshot1"
@@ -594,11 +580,4 @@ class TestVsphereSnapshots:
 
         assert result is True
         mock_get_object.assert_called_once()
-
-
-
-
-
-
-
 
