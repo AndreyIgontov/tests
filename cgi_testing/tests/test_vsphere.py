@@ -7,7 +7,6 @@ from cgi_testing.classes.vsphere import Vsphere
 
 @pytest.fixture(scope="function")
 def mock_si():
-
     mock = MagicMock()
     mock.content = MagicMock()
     mock.content.viewManager = MagicMock()
@@ -15,9 +14,11 @@ def mock_si():
 
     return mock
 
+
 @pytest.fixture(scope="function")
 def mock_vm():
     return MagicMock()
+
 
 @pytest.fixture(scope="function")
 def vsphere_instance():
@@ -27,8 +28,8 @@ def vsphere_instance():
         pwd="test-pwd",
     )
 
-class TestVsphereConnections:
 
+class TestVsphereConnections:
     def test_init(self):
         vsphere = Vsphere("test-host", "test-user", "test-pwd")
 
@@ -43,10 +44,10 @@ class TestVsphereConnections:
         result = Vsphere.Connect("test-host", "test-user", "test-pwd")
 
         mock_smart_connect.assert_called_once_with(
-            host='test-host',
-            user='test-user',
-            pwd='test-pwd',
-            disableSslCertValidation=True
+            host="test-host",
+            user="test-user",
+            pwd="test-pwd",
+            disableSslCertValidation=True,
         )
 
         assert result is not False
@@ -59,14 +60,13 @@ class TestVsphereConnections:
 
         assert result is False
 
+
 class TestVsphereGetObject:
-
     def test_get_object_no_name(self, mock_si):
-
         mock_vm_object_1 = MagicMock()
         mock_vm_object_2 = MagicMock()
 
-        mock_vm_object_1.name="vm1"
+        mock_vm_object_1.name = "vm1"
         mock_vm_object_2.name = "vm2"
 
         mock_container = MagicMock(view=[mock_vm_object_1, mock_vm_object_2])
@@ -77,7 +77,6 @@ class TestVsphereGetObject:
         assert result == [mock_vm_object_1, mock_vm_object_2]
 
     def test_get_object(self, mock_si):
-
         mock_vm_object_1 = MagicMock()
         mock_vm_object_2 = MagicMock()
 
@@ -94,34 +93,34 @@ class TestVsphereGetObject:
         assert result == mock_vm_object_1
 
     def test_get_object_error(self, mock_si):
-
-        mock_si.content.viewManager.CreateContainerView.side_effect = Exception("Unable to create container view")
+        mock_si.content.viewManager.CreateContainerView.side_effect = Exception(
+            "Unable to create container view"
+        )
 
         result = Vsphere.GetObject(mock_si, vim.Datastore, "vm1")
 
         assert result is False
 
+
 class TestVsphereUploadToDatastore:
-
     def test_convert_si_cookie_to_dict(self):
-
         test_cookie = "VMware_CSRF_TOKEN=41234123; Path=/sdk; Secure; HttpOnly"
-        expected_result = {
-            "VMware_CSRF_TOKEN": " 41234123; $Path=/sdk"
-        }
+        expected_result = {"VMware_CSRF_TOKEN": " 41234123; $Path=/sdk"}
 
         result = Vsphere.ConvertSICookieToDict(test_cookie)
 
         assert result == expected_result
 
-
-    @pytest.mark.parametrize("cookie", [
+    @pytest.mark.parametrize(
+        "cookie",
+        [
             "",  # Empty string
             "invalid_cookie",  # No equals sign
             "name=",  # No value
             "=value",  # No name
             None,  # None value
-    ])
+        ],
+    )
     def test_convert_cookie_error_handling(self, cookie):
         with pytest.raises(Exception):
             Vsphere.ConvertSICookieToDict(cookie)
@@ -129,7 +128,6 @@ class TestVsphereUploadToDatastore:
     @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
     @patch("cgi_testing.classes.vsphere.requests.put")
     def test_upload_to_datastore(self, mock_put, mock_get_object, mock_si):
-
         mock_si._stub.cookie = "VMware_CSRF_TOKEN=41234123; Path=/sdk"
 
         mock_datastore = MagicMock()
@@ -154,21 +152,17 @@ class TestVsphereUploadToDatastore:
 
         assert result is True
         mock_put.assert_called_once_with(
-            url='https://test-cloud.com:443/folder/test-folder/test.iso',
-            params={
-                'dsName': 'test-datastore',
-                'dcPath': 'test-datacenter'
-            },
+            url="https://test-cloud.com:443/folder/test-folder/test.iso",
+            params={"dsName": "test-datastore", "dcPath": "test-datacenter"},
             data=test_file,
-            headers={'Content-Type': 'application/octet-stream'},
-            cookies={'VMware_CSRF_TOKEN': ' 41234123; $Path=/sdk'},
-            verify=False
+            headers={"Content-Type": "application/octet-stream"},
+            cookies={"VMware_CSRF_TOKEN": " 41234123; $Path=/sdk"},
+            verify=False,
         )
 
     @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
     @patch("cgi_testing.classes.vsphere.requests.put")
     def test_upload_to_datastore(self, mock_put, mock_get_object, mock_si):
-
         mock_si._stub.cookie = "VMware_CSRF_TOKEN=41234123; Path=/sdk"
 
         mock_datastore = MagicMock()
@@ -193,11 +187,10 @@ class TestVsphereUploadToDatastore:
 
         assert result is False
 
-class TestVsphereVirtualCDSpec:
 
+class TestVsphereVirtualCDSpec:
     # Can be parametrized but with negative outcome of additional branching
     def test_get_virtual_cd_spec_with_iso(self):
-
         mock_cdrom = MagicMock()
         mock_cdrom.controllerKey = 200
         mock_cdrom.key = 3000
@@ -213,11 +206,12 @@ class TestVsphereVirtualCDSpec:
         assert result.device.connectable.allowGuestControl is True
         assert result.device.connectable.connected is True
         assert result.device.connectable.startConnected is True
-        assert isinstance(result.device.backing, vim.vm.device.VirtualCdrom.IsoBackingInfo)
+        assert isinstance(
+            result.device.backing, vim.vm.device.VirtualCdrom.IsoBackingInfo
+        )
         assert result.device.backing.fileName == iso_path
 
     def test_get_virtual_cd_spec_without_iso(self):
-
         mock_cdrom = MagicMock()
         mock_cdrom.controllerKey = 200
         mock_cdrom.key = 3000
@@ -231,19 +225,23 @@ class TestVsphereVirtualCDSpec:
         assert result.device.connectable.allowGuestControl is True
         assert result.device.connectable.connected is False
         assert result.device.connectable.startConnected is False
-        assert isinstance(result.device.backing, vim.vm.device.VirtualCdrom.RemotePassthroughBackingInfo)
+        assert isinstance(
+            result.device.backing,
+            vim.vm.device.VirtualCdrom.RemotePassthroughBackingInfo,
+        )
+
 
 class TestVsphereAttachISO:
-
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
-    def test_attach_iso_success(self, mock_execute_task, mock_get_object, mock_si, mock_vm):
-
-        mock_vm.ReconfigVM_Task = MagicMock(return_value='fake_task')
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
+    def test_attach_iso_success(
+        self, mock_execute_task, mock_get_object, mock_si, mock_vm
+    ):
+        mock_vm.ReconfigVM_Task = MagicMock(return_value="fake_task")
 
         mock_cdrom = MagicMock(spec=vim.vm.device.VirtualCdrom)
         mock_cdrom.deviceInfo = MagicMock()
-        mock_cdrom.deviceInfo.label = 'CD/DVD drive 1'
+        mock_cdrom.deviceInfo.label = "CD/DVD drive 1"
         mock_cdrom.controllerKey = 200
         mock_cdrom.key = 3000
 
@@ -252,24 +250,23 @@ class TestVsphereAttachISO:
 
         mock_execute_task.return_value = True
 
-
         result = Vsphere.AttachISOToVirtualMachine(
             si=mock_si,
             vm_name="test-vm",
             cdrom_number=1,
             datastore_name="test-datastore",
-            iso_path="folder/test.iso"
+            iso_path="folder/test.iso",
         )
 
         assert result is True
 
 
 class TestVspherePowerOperations:
-
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState')
-    def test_vm_power_on_success(self, mock_change_power_state, mock_get_object, mock_si, mock_vm):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState")
+    def test_vm_power_on_success(
+        self, mock_change_power_state, mock_get_object, mock_si, mock_vm
+    ):
         mock_vm.PowerOn = MagicMock()
         mock_get_object.return_value = mock_vm
         mock_change_power_state.return_value = True
@@ -279,24 +276,22 @@ class TestVspherePowerOperations:
         assert result is True
         mock_get_object.assert_called_once_with(mock_si, vim.VirtualMachine, "test-vm")
         mock_change_power_state.assert_called_once_with(
-            mock_vm,
-            vim.VirtualMachinePowerState.poweredOn,
-            mock_vm.PowerOn
+            mock_vm, vim.VirtualMachinePowerState.poweredOn, mock_vm.PowerOn
         )
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
     def test_vm_power_on_not_found(self, mock_get_object, mock_si):
-
         mock_get_object.return_value = False
 
         result = Vsphere.PowerOnVM(mock_si, "test-vm-1")
 
         assert result is False
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState')
-    def test_power_on_vm_failure(self, mock_change_power_state, mock_get_object, mock_vm):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState")
+    def test_power_on_vm_failure(
+        self, mock_change_power_state, mock_get_object, mock_vm
+    ):
         mock_vm.PowerOn = MagicMock()
         mock_get_object.return_value = mock_vm
         mock_change_power_state.return_value = False
@@ -305,10 +300,11 @@ class TestVspherePowerOperations:
 
         assert result is False
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState')
-    def test_vm_power_off_success(self, mock_change_power_state, mock_get_object, mock_si, mock_vm):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState")
+    def test_vm_power_off_success(
+        self, mock_change_power_state, mock_get_object, mock_si, mock_vm
+    ):
         mock_vm.PowerOff = MagicMock()
         mock_get_object.return_value = mock_vm
         mock_change_power_state.return_value = True
@@ -318,24 +314,22 @@ class TestVspherePowerOperations:
         assert result is True
         mock_get_object.assert_called_once_with(mock_si, vim.VirtualMachine, "test-vm")
         mock_change_power_state.assert_called_once_with(
-            mock_vm,
-            vim.VirtualMachinePowerState.poweredOff,
-            mock_vm.PowerOff
+            mock_vm, vim.VirtualMachinePowerState.poweredOff, mock_vm.PowerOff
         )
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
     def test_vm_power_off_not_found(self, mock_get_object, mock_si):
-
         mock_get_object.return_value = False
 
         result = Vsphere.PowerOffVM(mock_si, "test-vm-1")
 
         assert result is False
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState')
-    def test_power_off_vm_failure(self, mock_change_power_state, mock_get_object, mock_vm):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ChangeVMPowerState")
+    def test_power_off_vm_failure(
+        self, mock_change_power_state, mock_get_object, mock_vm
+    ):
         mock_vm.PowerOff = MagicMock()
         mock_get_object.return_value = mock_vm
         mock_change_power_state.return_value = False
@@ -344,10 +338,11 @@ class TestVspherePowerOperations:
 
         assert result is False
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
-    def test_reboot_vm_guest_success(self, mock_execute_task, mock_get_object, mock_si, mock_vm):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
+    def test_reboot_vm_guest_success(
+        self, mock_execute_task, mock_get_object, mock_si, mock_vm
+    ):
         mock_vm.RebootGuest = MagicMock()
         mock_vm.RebootGuest.return_value = "fake_task"
         mock_get_object.return_value = mock_vm
@@ -359,10 +354,11 @@ class TestVspherePowerOperations:
         mock_get_object.assert_called_once()
         mock_execute_task.assert_called_once_with(mock_vm.RebootGuest)
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
-    def test_reboot_vm_reset_success(self, mock_execute_task, mock_get_object, mock_si, mock_vm):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
+    def test_reboot_vm_reset_success(
+        self, mock_execute_task, mock_get_object, mock_si, mock_vm
+    ):
         mock_vm.RebootGuest = MagicMock()
         mock_vm.RebootGuest.side_effect = Exception("Unable to reboot")
 
@@ -378,37 +374,38 @@ class TestVspherePowerOperations:
         mock_get_object.assert_called_once()
 
         assert mock_execute_task.call_count == 2
-        mock_execute_task.assert_has_calls([
-            call(mock_vm.RebootGuest),
-            call(mock_vm.ResetVM_Task)
-        ])
+        mock_execute_task.assert_has_calls(
+            [call(mock_vm.RebootGuest), call(mock_vm.ResetVM_Task)]
+        )
 
     def test_change_vm_power_same_state(self, mock_vm):
-
         mock_vm.runtime.powerState = vim.VirtualMachinePowerState.poweredOff
 
-        result = Vsphere._ChangeVMPowerState(mock_vm, vim.VirtualMachinePowerState.poweredOff, mock_vm.PowerOff)
+        result = Vsphere._ChangeVMPowerState(
+            mock_vm, vim.VirtualMachinePowerState.poweredOff, mock_vm.PowerOff
+        )
 
         assert result is True
 
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
     def test_change_vm_power_different_state(self, mock_execute_task, mock_vm):
-
         mock_vm.runtime.powerState = vim.VirtualMachinePowerState.poweredOff
         mock_execute_task.return_value = True
 
-        result = Vsphere._ChangeVMPowerState(mock_vm, vim.VirtualMachinePowerState.poweredOn, mock_vm.PowerOn)
+        result = Vsphere._ChangeVMPowerState(
+            mock_vm, vim.VirtualMachinePowerState.poweredOn, mock_vm.PowerOn
+        )
 
         assert result is True
         mock_execute_task.assert_called_once()
 
 
 class TestVsphereDeleteVm:
-
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
-    def test_delete_vm_powered_off(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
+    def test_delete_vm_powered_off(
+        self, mock_execute_task, mock_get_object, mock_vm, mock_si
+    ):
         mock_vm.runtime = MagicMock()
         mock_vm.runtime.powerState = vim.VirtualMachinePowerState.poweredOff
 
@@ -422,11 +419,12 @@ class TestVsphereDeleteVm:
         mock_execute_task.assert_called_once()
         mock_get_object.assert_called_once()
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere.PowerOffVM')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
-    def test_delete_vm_powered_on(self, mock_execute_task, mock_power_off_vm, mock_get_object, mock_vm, mock_si):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere.PowerOffVM")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
+    def test_delete_vm_powered_on(
+        self, mock_execute_task, mock_power_off_vm, mock_get_object, mock_vm, mock_si
+    ):
         mock_vm.runtime = MagicMock()
         mock_vm.runtime.powerState = vim.VirtualMachinePowerState.poweredOn
 
@@ -442,48 +440,44 @@ class TestVsphereDeleteVm:
         mock_get_object.assert_called_once()
         mock_power_off_vm.assert_called_once_with(mock_si, mock_vm)
 
+
 class TestVsphereExecuteTask:
-
-    @patch('cgi_testing.classes.vsphere.WaitForTask')
+    @patch("cgi_testing.classes.vsphere.WaitForTask")
     def test_execute_task_success(self, mock_wait_task):
-
         mock_task = MagicMock()
         mock_task_method = MagicMock()
 
         mock_task_method.return_value = mock_task
-        mock_wait_task.return_value = 'success'
+        mock_wait_task.return_value = "success"
 
-        result = Vsphere._ExecuteTask(mock_task_method, arg1='test', arg2='test2')
+        result = Vsphere._ExecuteTask(mock_task_method, arg1="test", arg2="test2")
 
         assert result is True
-        mock_task_method.assert_called_once_with(arg1='test', arg2='test2')
+        mock_task_method.assert_called_once_with(arg1="test", arg2="test2")
         mock_wait_task.assert_called_once_with(mock_task)
 
-
-    @patch('cgi_testing.classes.vsphere.WaitForTask')
+    @patch("cgi_testing.classes.vsphere.WaitForTask")
     def test_execute_task_failure(self, mock_wait_task):
-
         mock_task = MagicMock()
         mock_task_method = MagicMock()
 
         mock_task_method.return_value = mock_task
-        mock_wait_task.return_value = 'failure'
+        mock_wait_task.return_value = "failure"
 
-        result = Vsphere._ExecuteTask(mock_task_method, arg1='test', arg2='test2')
+        result = Vsphere._ExecuteTask(mock_task_method, arg1="test", arg2="test2")
 
         assert result is False
-        mock_task_method.assert_called_once_with(arg1='test', arg2='test2')
+        mock_task_method.assert_called_once_with(arg1="test", arg2="test2")
         mock_wait_task.assert_called_once_with(mock_task)
 
-    @patch('cgi_testing.classes.vsphere.WaitForTask')
+    @patch("cgi_testing.classes.vsphere.WaitForTask")
     def test_execute_task_with_args(self, mock_wait_task):
-
         mock_task = MagicMock()
         mock_task_method = MagicMock(return_value=mock_task)
-        mock_wait_task.return_value = 'success'
+        mock_wait_task.return_value = "success"
 
-        test_args = ('arg1', 'arg2')
-        test_kwargs = {'kwarg1': 'value1', 'kwarg2': 'value2'}
+        test_args = ("arg1", "arg2")
+        test_kwargs = {"kwarg1": "value1", "kwarg2": "value2"}
 
         result = Vsphere._ExecuteTask(mock_task_method, *test_args, **test_kwargs)
 
@@ -491,20 +485,18 @@ class TestVsphereExecuteTask:
         mock_task_method.assert_called_once_with(*test_args, **test_kwargs)
         mock_wait_task.assert_called_once_with(mock_task)
 
+
 class TestVsphereSnapshots:
-
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
-    def test_make_snapshot_vm_success(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
+    def test_make_snapshot_vm_success(
+        self, mock_execute_task, mock_get_object, mock_vm, mock_si
+    ):
         mock_get_object.return_value = mock_vm
         mock_execute_task.return_value = True
 
         result = Vsphere.SnapshotVM(
-            mock_si,
-            "test-vm",
-            "test-snapshot",
-            "test-description"
+            mock_si, "test-vm", "test-snapshot", "test-description"
         )
 
         assert result is True
@@ -514,21 +506,19 @@ class TestVsphereSnapshots:
             name="test-snapshot",
             description="test-description",
             memory=True,
-            quiesce=False
+            quiesce=False,
         )
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
-    def test_make_snapshot_vm_failure(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
-
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
+    def test_make_snapshot_vm_failure(
+        self, mock_execute_task, mock_get_object, mock_vm, mock_si
+    ):
         mock_get_object.return_value = mock_vm
         mock_execute_task.return_value = False
 
         result = Vsphere.SnapshotVM(
-            mock_si,
-            "test-vm",
-            "test-snapshot",
-            "test-description"
+            mock_si, "test-vm", "test-snapshot", "test-description"
         )
 
         assert result is False
@@ -538,27 +528,25 @@ class TestVsphereSnapshots:
             name="test-snapshot",
             description="test-description",
             memory=True,
-            quiesce=False
+            quiesce=False,
         )
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
     def test_make_snapshot_vm_not_found(self, mock_get_object, mock_vm, mock_si):
-
         mock_get_object.return_value = False
 
         result = Vsphere.SnapshotVM(
-            mock_si,
-            "test-vm",
-            "test-snapshot",
-            "test-description"
+            mock_si, "test-vm", "test-snapshot", "test-description"
         )
 
         assert result is False
         mock_get_object.assert_called_once()
 
-    @patch('cgi_testing.classes.vsphere.Vsphere.GetObject')
-    @patch('cgi_testing.classes.vsphere.Vsphere._ExecuteTask')
-    def test_restore_snapshot(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
+    @patch("cgi_testing.classes.vsphere.Vsphere.GetObject")
+    @patch("cgi_testing.classes.vsphere.Vsphere._ExecuteTask")
+    def test_restore_snapshot(
+        self, mock_execute_task, mock_get_object, mock_vm, mock_si
+    ):
         snapshot1 = MagicMock()
         snapshot1.name = "snapshot1"
 
@@ -572,12 +560,8 @@ class TestVsphereSnapshots:
         mock_execute_task.return_value = True
 
         result = Vsphere.SnapshotVM(
-            mock_si,
-            "test-vm",
-            "test-snapshot",
-            "test-description"
+            mock_si, "test-vm", "test-snapshot", "test-description"
         )
 
         assert result is True
         mock_get_object.assert_called_once()
-
