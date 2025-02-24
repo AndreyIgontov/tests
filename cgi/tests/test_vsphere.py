@@ -456,6 +456,147 @@ class TestVsphereDeleteVm:
         mock_get_object.assert_called_once()
         mock_power_off_vm.assert_called_once_with(mock_si, mock_vm)
 
+class TestVsphereExecuteTask:
+
+    @patch('cgi.classes.vsphere.WaitForTask')
+    def test_execute_task_success(self, mock_wait_task):
+
+        mock_task = MagicMock()
+        mock_task_method = MagicMock()
+
+        mock_task_method.return_value = mock_task
+        mock_wait_task.return_value = 'success'
+
+        result = Vsphere._ExecuteTask(mock_task_method, arg1='test', arg2='test2')
+
+        assert result is True
+        mock_task_method.assert_called_once_with(arg1='test', arg2='test2')
+        mock_wait_task.assert_called_once_with(mock_task)
+
+
+    @patch('cgi.classes.vsphere.WaitForTask')
+    def test_execute_task_failure(self, mock_wait_task):
+
+        mock_task = MagicMock()
+        mock_task_method = MagicMock()
+
+        mock_task_method.return_value = mock_task
+        mock_wait_task.return_value = 'failure'
+
+        result = Vsphere._ExecuteTask(mock_task_method, arg1='test', arg2='test2')
+
+        assert result is False
+        mock_task_method.assert_called_once_with(arg1='test', arg2='test2')
+        mock_wait_task.assert_called_once_with(mock_task)
+
+    @patch('cgi.classes.vsphere.WaitForTask')
+    def test_execute_task_with_args(self, mock_wait_task):
+
+        mock_task = MagicMock()
+        mock_task_method = MagicMock(return_value=mock_task)
+        mock_wait_task.return_value = 'success'
+
+        test_args = ('arg1', 'arg2')
+        test_kwargs = {'kwarg1': 'value1', 'kwarg2': 'value2'}
+
+        result = Vsphere._ExecuteTask(mock_task_method, *test_args, **test_kwargs)
+
+        assert result is True
+        mock_task_method.assert_called_once_with(*test_args, **test_kwargs)
+        mock_wait_task.assert_called_once_with(mock_task)
+
+class TestVsphereSnapshots:
+
+    @patch('cgi.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    def test_make_snapshot_vm_success(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
+
+        mock_get_object.return_value = mock_vm
+        mock_execute_task.return_value = True
+
+        result = Vsphere.SnapshotVM(
+            mock_si,
+            "test-vm",
+            "test-snapshot",
+            "test-description"
+        )
+
+        assert result is True
+        mock_get_object.assert_called_once()
+        mock_execute_task.assert_called_once_with(
+            mock_vm.CreateSnapshot,
+            name="test-snapshot",
+            description="test-description",
+            memory=True,
+            quiesce=False
+        )
+
+    @patch('cgi.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    def test_make_snapshot_vm_failure(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
+
+        mock_get_object.return_value = mock_vm
+        mock_execute_task.return_value = False
+
+        result = Vsphere.SnapshotVM(
+            mock_si,
+            "test-vm",
+            "test-snapshot",
+            "test-description"
+        )
+
+        assert result is False
+        mock_get_object.assert_called_once()
+        mock_execute_task.assert_called_once_with(
+            mock_vm.CreateSnapshot,
+            name="test-snapshot",
+            description="test-description",
+            memory=True,
+            quiesce=False
+        )
+
+    @patch('cgi.classes.vsphere.Vsphere.GetObject')
+    def test_make_snapshot_vm_not_found(self, mock_get_object, mock_vm, mock_si):
+
+        mock_get_object.return_value = False
+
+        result = Vsphere.SnapshotVM(
+            mock_si,
+            "test-vm",
+            "test-snapshot",
+            "test-description"
+        )
+
+        assert result is False
+        mock_get_object.assert_called_once()
+
+    @patch('cgi.classes.vsphere.Vsphere.GetObject')
+    @patch('cgi.classes.vsphere.Vsphere._ExecuteTask')
+    def test_restore_snapshot(self, mock_execute_task, mock_get_object, mock_vm, mock_si):
+        snapshot1 = MagicMock()
+        snapshot1.name = "snapshot1"
+
+        snapshot2 = MagicMock()
+        snapshot2.name = "snapshot2"
+
+        mock_vm.snapshot = MagicMock()
+        mock_vm.snapshot.rootSnapshotList = []
+
+        mock_get_object.return_value = mock_vm
+        mock_execute_task.return_value = True
+
+        result = Vsphere.SnapshotVM(
+            mock_si,
+            "test-vm",
+            "test-snapshot",
+            "test-description"
+        )
+
+        assert result is True
+        mock_get_object.assert_called_once()
+
+
+
 
 
 

@@ -9,6 +9,6 @@ env/
 venv/
 ENV/
 venv3.8
-
+.pytest_cache
 # PyCharm
 .idea/
